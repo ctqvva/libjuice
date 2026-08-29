@@ -232,6 +232,11 @@ if(NOT NO_TESTS)
 	target_include_directories(juice-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 	target_include_directories(juice-tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/juice)
 
+	add_executable(turn-map-test ${CMAKE_CURRENT_SOURCE_DIR}/test/turn-map.c)
+	target_include_directories(turn-map-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+	target_include_directories(turn-map-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/juice)
+	target_link_libraries(turn-map-test juice-static Threads::Threads)
+
 	set_target_properties(juice-tests PROPERTIES
 		VERSION ${PROJECT_VERSION}
 		OUTPUT_NAME tests)
