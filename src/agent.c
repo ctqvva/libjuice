@@ -966,11 +966,6 @@ int agent_conn_tcp_state(juice_agent_t *agent, const addr_record_t *dst, tcp_sta
 	return -1;
 }
 
-static bool pair_good_enough( struct ice_candidate_pair *pair) {
-    return pair->local->type!=ICE_CANDIDATE_TYPE_RELAYED && pair->remote->type!=ICE_CANDIDATE_TYPE_RELAYED; 
-    }
-
-
 int agent_bookkeeping(juice_agent_t *agent, timestamp_t *next_timestamp) {
 
     JLOG_VERBOSE("Bookkeeping... agent=%p",agent);
@@ -1348,7 +1343,7 @@ agent->mode == AGENT_MODE_CONTROLLING ?"Controlling":"Controlled",
 #endif
             {
             if (pending_count == 0||!lowestpair||lowestpair->priority<=selected_pair->priority||
-                (agent->nomination_timestamp && now >= agent->nomination_timestamp&&pair_good_enough(selected_pair))) {
+                (agent->nomination_timestamp && now >= agent->nomination_timestamp)) {
 			   // Connected
 
                 JLOG_DEBUG("Bookkeeping CONNECTED %s local=%s:%s remote=%s:%s ", agent->mode == AGENT_MODE_CONTROLLING ?"Controlling":"Controlled", lname?lname:"",lservice?lservice:"",rname?rname:"",rservice?rservice:"");
