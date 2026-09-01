@@ -1071,6 +1071,7 @@ int agent_bookkeeping(juice_agent_t *agent, timestamp_t *next_timestamp) {
 				JLOG_INFO("STUN entry %d: Consent expired for candidate pair", i);
 				entry->pair->state = ICE_CANDIDATE_PAIR_STATE_FAILED;
 				entry->state = AGENT_STUN_ENTRY_STATE_FAILED;
+				entry->transaction_id_expired = true;
 				entry->next_transmission = 0;
 				continue;
 			}
@@ -2880,7 +2881,7 @@ agent_stun_entry_t *agent_find_entry_from_transaction_id(juice_agent_t *agent,
                                                          const uint8_t *transaction_id) {
 	for (int i = 0; i < agent->entries_count; ++i) {
 		agent_stun_entry_t *entry = agent->entries + i;
-		if (memcmp(transaction_id, entry->transaction_id, STUN_TRANSACTION_ID_SIZE) == 0) {
+		if (agent_stun_entry_matches_transaction_id(entry, transaction_id)) {
 			JLOG_VERBOSE("STUN entry %d matching incoming transaction ID", i);
 			return entry;
 		}

@@ -21,6 +21,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 
 // RFC 8445: Agents MUST NOT use an RTO value smaller than 500 ms.
 #define MIN_STUN_RETRANSMISSION_TIMEOUT 500 // msecs
@@ -123,6 +124,12 @@ typedef struct agent_stun_entry {
 	struct agent_stun_entry *relay_entry;
 
 } agent_stun_entry_t;
+
+static inline bool agent_stun_entry_matches_transaction_id(
+    const agent_stun_entry_t *entry, const uint8_t *transaction_id) {
+	return !entry->transaction_id_expired &&
+	       memcmp(transaction_id, entry->transaction_id, STUN_TRANSACTION_ID_SIZE) == 0;
+}
 
 struct juice_agent {
 	juice_config_t config;
