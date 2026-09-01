@@ -13,6 +13,7 @@
 int test_crc32(void);
 int test_base64(void);
 int test_stun(void);
+int test_consent_transaction_expiry(void);
 int test_connectivity(void);
 int test_thread(void);
 int test_mux(void);
@@ -51,6 +52,12 @@ int main(int argc, char **argv) {
 	printf("\nRunning STUN parsing implementation test...\n");
 	if (test_stun()) {
 		fprintf(stderr, "STUN parsing implementation test failed\n");
+		return -3;
+	}
+
+	printf("\nRunning consent transaction expiry test...\n");
+	if (test_consent_transaction_expiry()) {
+		fprintf(stderr, "Consent transaction expiry test failed\n");
 		return -3;
 	}
 
@@ -158,4 +165,3 @@ int main(int argc, char **argv) {
 
 	return 0;
 }
-
