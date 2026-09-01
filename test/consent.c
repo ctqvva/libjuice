@@ -21,11 +21,12 @@ int test_consent_transaction_expiry(void) {
 		transaction_id[i] = (uint8_t)(i + 1);
 	memcpy(entry.transaction_id, transaction_id, sizeof(transaction_id));
 
-	entry.transaction_id_expired = false;
+	entry.state = AGENT_STUN_ENTRY_STATE_SUCCEEDED_KEEPALIVE;
+	entry.transaction_id_expired = true;
 	if (!agent_stun_entry_matches_transaction_id(&entry, transaction_id))
 		return -1;
 
-	entry.transaction_id_expired = true;
+	entry.state = AGENT_STUN_ENTRY_STATE_FAILED;
 	if (agent_stun_entry_matches_transaction_id(&entry, transaction_id))
 		return -1;
 

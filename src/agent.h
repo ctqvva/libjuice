@@ -127,7 +127,7 @@ typedef struct agent_stun_entry {
 
 static inline bool agent_stun_entry_matches_transaction_id(
     const agent_stun_entry_t *entry, const uint8_t *transaction_id) {
-	return !entry->transaction_id_expired &&
+	return entry->state != AGENT_STUN_ENTRY_STATE_FAILED &&
 	       memcmp(transaction_id, entry->transaction_id, STUN_TRANSACTION_ID_SIZE) == 0;
 }
 
