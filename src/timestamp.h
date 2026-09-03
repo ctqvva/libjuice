@@ -16,5 +16,6 @@ typedef int64_t timestamp_t;
 typedef timestamp_t timediff_t;
 
 timestamp_t current_timestamp();
+timestamp_t current_consent_timestamp();
 
 #endif

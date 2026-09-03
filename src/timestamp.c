@@ -31,27 +31,39 @@ int clock_gettime(int clk_id, struct timespec *t) {
 }
 #endif // defined(__APPLE__) && !defined(CLOCK_MONOTONIC)
 
+static timestamp_t current_posix_timestamp(clockid_t clock_id) {
+	struct timespec ts;
+	if (clock_gettime(clock_id, &ts))
+		return 0;
+	return (timestamp_t)ts.tv_sec * 1000 + (timestamp_t)ts.tv_nsec / 1000000;
+}
 #endif
 
 timestamp_t current_timestamp() {
 #ifdef _WIN32
 	return (timestamp_t)GetTickCount();
 #else // POSIX
-	struct timespec ts;
 	/*
-	 * ICE consent and TURN allocation deadlines continue to elapse while a
-	 * machine is suspended. CLOCK_MONOTONIC stops during suspend on Linux,
-	 * which leaves those deadlines artificially fresh after resume and can
-	 * delay failure detection for several minutes. CLOCK_BOOTTIME has the same
-	 * monotonic guarantees and includes suspended time.
+	 * Scheduling and TURN allocation deadlines must become overdue while a
+	 * machine is suspended so they are processed immediately after resume.
 	 */
 #ifdef CLOCK_BOOTTIME
-	const clockid_t clock_id = CLOCK_BOOTTIME;
+	return current_posix_timestamp(CLOCK_BOOTTIME);
 #else
-	const clockid_t clock_id = CLOCK_MONOTONIC;
+	return current_posix_timestamp(CLOCK_MONOTONIC);
 #endif
-	if (clock_gettime(clock_id, &ts))
-		return 0;
-	return (timestamp_t)ts.tv_sec * 1000 + (timestamp_t)ts.tv_nsec / 1000000;
+#endif
+}
+
+timestamp_t current_consent_timestamp() {
+#ifdef _WIN32
+	return current_timestamp();
+#else // POSIX
+	/*
+	 * Consent checks cannot run while the process is suspended. Measure their
+	 * expiry in active runtime so resume first gets a chance to send the
+	 * already-overdue check instead of destroying an unchanged candidate pair.
+	 */
+	return current_posix_timestamp(CLOCK_MONOTONIC);
 #endif
 }

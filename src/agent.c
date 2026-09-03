@@ -970,6 +970,7 @@ int agent_bookkeeping(juice_agent_t *agent, timestamp_t *next_timestamp) {
 
     JLOG_VERBOSE("Bookkeeping... agent=%p",agent);
 	timestamp_t now = current_timestamp();
+	timestamp_t consent_now = current_consent_timestamp();
 	*next_timestamp = now + 6000000;
 
 	if (agent->state == JUICE_STATE_DISCONNECTED || agent->state == JUICE_STATE_GATHERING)
@@ -1062,7 +1063,7 @@ int agent_bookkeeping(juice_agent_t *agent, timestamp_t *next_timestamp) {
 			// No expiration
 #else
 			// Consent freshness expiration
-			if (entry->pair && entry->pair->consent_expiry <= now) {
+			if (entry->pair && agent_pair_consent_expired(entry->pair, consent_now)) {
 				JLOG_INFO("STUN entry %d: Consent expired for candidate pair", i);
 				entry->pair->state = ICE_CANDIDATE_PAIR_STATE_FAILED;
 				entry->state = AGENT_STUN_ENTRY_STATE_FAILED;
@@ -1400,11 +1401,13 @@ agent->mode == AGENT_MODE_CONTROLLING ?"Controlling":"Controlled",
 #if JUICE_DISABLE_CONSENT_FRESHNESS
 		// No expiration
 #else
-		if (entry->state == AGENT_STUN_ENTRY_STATE_SUCCEEDED_KEEPALIVE && entry->pair &&
-		    *next_timestamp > entry->pair->consent_expiry) {
-			*next_timestamp = selected_pair->consent_expiry;
-                        JLOG_DEBUG("Bookkeeping selected_pair->consent_expiry=%lu over %d\n",*next_timestamp,*next_timestamp-now);
-                        }
+		if (entry->state == AGENT_STUN_ENTRY_STATE_SUCCEEDED_KEEPALIVE && entry->pair) {
+			timestamp_t consent_deadline =
+			    agent_pair_consent_scheduler_deadline(entry->pair, now, consent_now);
+			if (*next_timestamp > consent_deadline)
+				*next_timestamp = consent_deadline;
+                        JLOG_DEBUG("Bookkeeping consent deadline=%lu over %d\n",*next_timestamp,*next_timestamp-now);
+		}
 #endif
 	}
     int timediff=( *next_timestamp-now);
@@ -1756,7 +1759,7 @@ int agent_process_stun_binding(juice_agent_t *agent, const stun_message_t *msg,
 				                                           ICE_CANDIDATE_TYPE_UNKNOWN);
 
 			// Update consent timestamp
-			pair->consent_expiry = current_timestamp() + CONSENT_TIMEOUT;
+			pair->consent_expiry = current_consent_timestamp() + CONSENT_TIMEOUT;
 
 			// RFC 8445 7.3.1.5. Updating the Nominated Flag:
 			// [...] once the check is sent and if it generates a successful response, and

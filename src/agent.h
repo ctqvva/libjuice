@@ -131,6 +131,18 @@ static inline bool agent_stun_entry_matches_transaction_id(
 	       memcmp(transaction_id, entry->transaction_id, STUN_TRANSACTION_ID_SIZE) == 0;
 }
 
+static inline bool agent_pair_consent_expired(const ice_candidate_pair_t *pair,
+                                               timestamp_t consent_now) {
+	return pair->consent_expiry <= consent_now;
+}
+
+static inline timestamp_t agent_pair_consent_scheduler_deadline(const ice_candidate_pair_t *pair,
+                                                                 timestamp_t scheduler_now,
+                                                                 timestamp_t consent_now) {
+	timediff_t remaining = pair->consent_expiry - consent_now;
+	return scheduler_now + (remaining > 0 ? remaining : 0);
+}
+
 struct juice_agent {
 	juice_config_t config;
 	juice_state_t state;

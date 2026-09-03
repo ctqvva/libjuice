@@ -32,3 +32,27 @@ int test_consent_transaction_expiry(void) {
 
 	return 0;
 }
+
+int test_consent_suspend_deadline(void) {
+	ice_candidate_pair_t pair;
+	memset(&pair, 0, sizeof(pair));
+
+	/* A 60-second suspend advances scheduling time but not active consent time. */
+	const timestamp_t scheduler_now = 160000;
+	const timestamp_t consent_now = 100000;
+	pair.consent_expiry = consent_now + CONSENT_TIMEOUT;
+
+	if (agent_pair_consent_expired(&pair, consent_now))
+		return -1;
+	if (agent_pair_consent_scheduler_deadline(&pair, scheduler_now, consent_now) !=
+	    scheduler_now + CONSENT_TIMEOUT)
+		return -1;
+
+	if (!agent_pair_consent_expired(&pair, pair.consent_expiry))
+		return -1;
+	if (agent_pair_consent_scheduler_deadline(&pair, scheduler_now, pair.consent_expiry) !=
+	    scheduler_now)
+		return -1;
+
+	return 0;
+}
