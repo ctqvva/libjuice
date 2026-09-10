@@ -238,6 +238,11 @@ if(NOT NO_TESTS)
 	target_include_directories(turn-map-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/juice)
 	target_link_libraries(turn-map-test juice-static Threads::Threads)
 
+    add_executable(ipv4-preference-test ${CMAKE_CURRENT_SOURCE_DIR}/test/ipv4-preference.c)
+    target_include_directories(ipv4-preference-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_include_directories(ipv4-preference-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/juice)
+    target_link_libraries(ipv4-preference-test juice-static Threads::Threads)
+
 	set_target_properties(juice-tests PROPERTIES
 		VERSION ${PROJECT_VERSION}
 		OUTPUT_NAME tests)

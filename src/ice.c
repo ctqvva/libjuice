@@ -185,7 +185,7 @@ int ice_create_local_description(ice_description_t *description) {
 }
 
 int ice_create_local_candidate(ice_candidate_type_t type, int component, int index,
-                               const addr_record_t *record, ice_candidate_t *candidate, ice_candidate_transport_t transport) {
+                               const addr_record_t *record, ice_candidate_t *candidate, ice_candidate_transport_t transport, bool prefer_ipv4) {
 	memset(candidate, 0, sizeof(*candidate));
 	candidate->type = type;
 	candidate->component = component;
@@ -199,8 +199,8 @@ int ice_create_local_candidate(ice_candidate_type_t type, int component, int ind
 	}
 	candidate->resolved.socktype = socktype;
 
-	candidate->priority = ice_compute_priority(candidate->type, candidate->resolved.addr.ss_family,
-	                                           candidate->component, index, candidate->transport);
+	candidate->priority = ice_compute_priority_with_preference(candidate->type, candidate->resolved.addr.ss_family,
+	                                           candidate->component, index, candidate->transport, prefer_ipv4);
 
 	if (getnameinfo((struct sockaddr *)&record->addr, record->len, candidate->hostname, 256,
 	                candidate->service, 32, NI_NUMERICHOST | NI_NUMERICSERV | NI_DGRAM)) {
@@ -391,7 +391,7 @@ int ice_generate_candidate_sdp(const ice_candidate_t *candidate, char *buffer, s
 void log_pair(const char *message, const struct ice_candidate_pair *pair);
 #endif
 int ice_create_candidate_pair(ice_candidate_t *local, ice_candidate_t *remote, bool is_controlling,
-                              ice_candidate_pair_t *pair) { // local or remote might be NULL
+                              ice_candidate_pair_t *pair, bool prefer_ipv4) { // local or remote might be NULL
 	if (local && remote && local->resolved.addr.ss_family != remote->resolved.addr.ss_family) {
 		JLOG_ERROR("Mismatching candidates address families");
 		return -1;
@@ -400,6 +400,7 @@ int ice_create_candidate_pair(ice_candidate_t *local, ice_candidate_t *remote, b
 	memset(pair, 0, sizeof(*pair));
 	pair->local = local;
 	pair->remote = remote;
+    pair->prefer_ipv4 = prefer_ipv4;
 	pair->state = ICE_CANDIDATE_PAIR_STATE_FROZEN;
     log_pair("Create pair",pair);
 	return ice_update_candidate_pair(pair, is_controlling);
@@ -413,8 +414,8 @@ int ice_update_candidate_pair(ice_candidate_pair_t *pair, bool is_controlling) {
 	uint64_t local_priority =
 	    pair->local
 	        ? pair->local->priority
-	        : ice_compute_priority(ICE_CANDIDATE_TYPE_HOST, pair->remote->resolved.addr.ss_family,
-	                               pair->remote->component, 0, pair->remote->transport);
+	        : ice_compute_priority_with_preference(ICE_CANDIDATE_TYPE_HOST, pair->remote->resolved.addr.ss_family,
+	                               pair->remote->component, 0, pair->remote->transport, pair->prefer_ipv4);
 	uint64_t remote_priority =
 	    pair->remote
 	        ? pair->remote->priority
@@ -439,6 +440,12 @@ int ice_candidates_count(const ice_description_t *description, ice_candidate_typ
 }
 
 uint32_t ice_compute_priority(ice_candidate_type_t type, int family, int component, int index, ice_candidate_transport_t transport) {
+    return ice_compute_priority_with_preference(type, family, component, index, transport, false);
+}
+
+uint32_t ice_compute_priority_with_preference(ice_candidate_type_t type, int family, int component,
+                                             int index, ice_candidate_transport_t transport,
+                                             bool prefer_ipv4) {
     // Compute candidate priority according to RFC 8445
     // See https://www.rfc-editor.org/rfc/rfc8445.html#section-5.1.2.1
     uint32_t p = 0;
@@ -488,13 +495,14 @@ uint32_t ice_compute_priority(ice_candidate_type_t type, int family, int compone
             break;
     }
     local <<= 13;
-    // Prefer IPv6 over IPv4
+    // Change only address-family local preference, never candidate type or
+    // transport preference. IPv6 remains a candidate when IPv4 is preferred.
     switch (family) {
     case AF_INET6:
-        local += 8191;
+        local += prefer_ipv4 ? 4095 : 8191;
         break;
     case AF_INET:
-        local += 4095;
+        local += prefer_ipv4 ? 8191 : 4095;
         break;
     default:
         break;

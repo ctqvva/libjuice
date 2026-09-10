@@ -79,6 +79,7 @@ typedef struct ice_candidate_pair {
 	bool nomination_requested;
 	tcp_state_t tcp_state;
 	timestamp_t consent_expiry;
+    bool prefer_ipv4;
 } ice_candidate_pair_t;
 
 typedef enum ice_resolve_mode {
@@ -96,7 +97,7 @@ int ice_parse_candidate_sdp(const char *line, ice_candidate_t *candidate);
 int ice_create_local_description(ice_description_t *description);
 int ice_create_local_candidate(ice_candidate_type_t type, int component, int index,
                                const addr_record_t *record, ice_candidate_t *candidate,
-                               ice_candidate_transport_t transport);
+                               ice_candidate_transport_t transport, bool prefer_ipv4);
 int ice_resolve_candidate(ice_candidate_t *candidate, ice_resolve_mode_t mode);
 int ice_add_candidate(ice_candidate_t *candidate, ice_description_t *description);
 void ice_sort_candidates(ice_description_t *description);
@@ -106,13 +107,16 @@ ice_candidate_t *ice_find_candidate_from_addr(ice_description_t *description,
 int ice_generate_sdp(const ice_description_t *description, char *buffer, size_t size);
 int ice_generate_candidate_sdp(const ice_candidate_t *candidate, char *buffer, size_t size);
 int ice_create_candidate_pair(ice_candidate_t *local, ice_candidate_t *remote, bool is_controlling,
-                              ice_candidate_pair_t *pair); // local or remote might be NULL
+                              ice_candidate_pair_t *pair, bool prefer_ipv4); // local or remote might be NULL
 int ice_update_candidate_pair(ice_candidate_pair_t *pair, bool is_controlling);
 
 int ice_candidates_count(const ice_description_t *description, ice_candidate_type_t type);
 
 uint32_t ice_compute_priority(ice_candidate_type_t type, int family, int component, int index,
                               ice_candidate_transport_t transport);
+uint32_t ice_compute_priority_with_preference(ice_candidate_type_t type, int family, int component,
+                                             int index, ice_candidate_transport_t transport,
+                                             bool prefer_ipv4);
 
 bool ice_is_valid_string(const char *str);
 

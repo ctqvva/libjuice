@@ -116,6 +116,9 @@ typedef struct juice_config {
 
 	void *user_ptr;
 
+	// Opt-in address-family preference for new agents. Both families remain enabled.
+	bool prefer_ipv4;
+
 } juice_config_t;
 
 JUICE_EXPORT juice_agent_t *juice_create(const juice_config_t *config);

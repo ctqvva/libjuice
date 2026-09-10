@@ -134,6 +134,7 @@ juice_agent_t *agent_create(const juice_config_t *config) {
 	agent->config.cb_gathering_done = config->cb_gathering_done;
 	agent->config.cb_recv = config->cb_recv;
 	agent->config.user_ptr = config->user_ptr;
+    agent->config.prefer_ipv4 = config->prefer_ipv4;
 	if (alloc_failed) {
 		JLOG_FATAL("Memory allocation for configuration copy failed");
 		goto error;
@@ -315,7 +316,7 @@ int agent_gather_candidates(juice_agent_t *agent) {
 	for (int i = 0; i < records_count; ++i) {
 		ice_candidate_t candidate;
 		if (ice_create_local_candidate(ICE_CANDIDATE_TYPE_HOST, 1, agent->local.candidates_count,
-		                               records + i, &candidate, ICE_CANDIDATE_TRANSPORT_UDP)) {
+		                               records + i, &candidate, ICE_CANDIDATE_TRANSPORT_UDP, agent->config.prefer_ipv4)) {
 			JLOG_ERROR("Failed to create host candidate");
 			continue;
 		}
@@ -1918,7 +1919,8 @@ int agent_send_stun_binding(juice_agent_t *agent, agent_stun_entry_t *entry, stu
 			                ? (int)(entry->pair->local - agent->local.candidates)
 			                : 0;
 			msg.priority =
-			    ice_compute_priority(ICE_CANDIDATE_TYPE_PEER_REFLEXIVE, family, 1, index, false);
+			    ice_compute_priority_with_preference(ICE_CANDIDATE_TYPE_PEER_REFLEXIVE, family, 1, index,
+                                                     ICE_CANDIDATE_TRANSPORT_UDP, agent->config.prefer_ipv4);
 
 			// RFC 8445 8.1.1. Nominating Pairs:
 			// Once the controlling agent has picked a valid pair for nomination, it repeats the
@@ -2473,7 +2475,7 @@ int agent_add_local_relayed_candidate(juice_agent_t *agent, const addr_record_t 
 	}
 	ice_candidate_t candidate;
 	if (ice_create_local_candidate(ICE_CANDIDATE_TYPE_RELAYED, 1, agent->local.candidates_count,
-	                               record, &candidate, ICE_CANDIDATE_TRANSPORT_UDP)) {
+	                               record, &candidate, ICE_CANDIDATE_TRANSPORT_UDP, agent->config.prefer_ipv4)) {
 		JLOG_ERROR("Failed to create relayed candidate");
 		return -1;
 	}
@@ -2521,7 +2523,7 @@ int agent_add_local_reflexive_candidate(juice_agent_t *agent, ice_candidate_type
 	}
 	ice_candidate_t candidate;
 	if (ice_create_local_candidate(type, 1, agent->local.candidates_count, record, &candidate,
-	                               ICE_CANDIDATE_TRANSPORT_UDP)) {
+	                               ICE_CANDIDATE_TRANSPORT_UDP, agent->config.prefer_ipv4)) {
 		JLOG_ERROR("Failed to create reflexive candidate %s",hostname);
 		return -1;
 	}
@@ -2566,7 +2568,7 @@ int agent_add_remote_reflexive_candidate(juice_agent_t *agent, ice_candidate_typ
 	}
 	ice_candidate_t candidate;
 	if (ice_create_local_candidate(type, 1, agent->local.candidates_count, record, &candidate,
-	                               ICE_CANDIDATE_TRANSPORT_UDP)) {
+	                               ICE_CANDIDATE_TRANSPORT_UDP, false)) {
 		JLOG_ERROR("Failed to create reflexive candidate %s",hostname);
 		return -1;
 	}
@@ -2592,7 +2594,7 @@ int agent_add_remote_reflexive_candidate(juice_agent_t *agent, ice_candidate_typ
 int agent_add_local_tcp_active_candidate(juice_agent_t *agent, addr_record_t *record) {
 	ice_candidate_t candidate;
 	if (ice_create_local_candidate(ICE_CANDIDATE_TYPE_HOST, 1, agent->local.candidates_count,
-	                               record, &candidate, ICE_CANDIDATE_TRANSPORT_TCP_TYPE_ACTIVE)) {
+	                               record, &candidate, ICE_CANDIDATE_TRANSPORT_TCP_TYPE_ACTIVE, agent->config.prefer_ipv4)) {
 		JLOG_ERROR("Failed to create TCP candidate");
 		return -1;
 	}
@@ -2608,7 +2610,7 @@ int agent_add_candidate_pair(juice_agent_t *agent, ice_candidate_t *local, // lo
                              ice_candidate_t *remote) {
 	ice_candidate_pair_t pair;
 	bool is_controlling = agent->mode == AGENT_MODE_CONTROLLING;
-	if (ice_create_candidate_pair(local, remote, is_controlling, &pair)) {
+	if (ice_create_candidate_pair(local, remote, is_controlling, &pair, agent->config.prefer_ipv4)) {
 		JLOG_ERROR("Failed to create candidate pair");
 		return -1;
 	}
