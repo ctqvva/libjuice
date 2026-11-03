@@ -45,14 +45,19 @@
 
 // Consent freshness
 // RFC 7675: Consent expires after 30 seconds.
-#define CONSENT_TIMEOUT 30000 // msecs
+// Juggluco: a check every 4-6 s from both peers put a packet on the radio about every 2.5 s, so
+// two phones kept each other out of deep sleep around the clock. Check every 12-18 s instead
+// (still the 0.8-1.2 randomisation, and the RFC 8445 15 s keepalive that keeps NAT bindings open)
+// and expire after 60 s, so three lost checks in a row still don't drop a working pair. Consent
+// is only asked of the peer, so this interoperates with agents on the RFC defaults.
+#define CONSENT_TIMEOUT 60000 // msecs
 
 // RFC 7675: To prevent synchronization of consent checks, each interval MUST be randomized from
 // between 0.8 and 1.2 times the basic period. Implementations SHOULD set a default interval of 5
 // seconds, resulting in a period between checks of 4 to 6 seconds. Implementations MUST NOT set the
 // period between checks to less than 4 seconds.
-#define MIN_CONSENT_CHECK_PERIOD 4000 // msecs
-#define MAX_CONSENT_CHECK_PERIOD 6000 // msecs
+#define MIN_CONSENT_CHECK_PERIOD 12000 // msecs
+#define MAX_CONSENT_CHECK_PERIOD 18000 // msecs
 
 // Nomination timeout for the controlling agent to settle for the selected pair
 #define NOMINATION_TIMEOUT 2000
