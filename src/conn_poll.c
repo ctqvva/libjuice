@@ -476,6 +476,10 @@ int conn_poll_process(conn_registry_t *registry, pfds_record_t *pfds) {
 		if (conn_impl->tcp_sock == INVALID_SOCKET)
 			continue;
 
+		// The socket may have been opened after the array was prepared
+		if (i >= pfds->size)
+			break;
+
 		struct pollfd *tcp_pfd = pfds->pfds + i;
 		if (tcp_pfd->fd != conn_impl->tcp_sock)
 			break;
