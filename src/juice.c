@@ -123,8 +123,11 @@ JUICE_EXPORT int juice_get_selected_candidates(juice_agent_t *agent, char *local
 }
 
 static     int addstring(char *buf,int maxlen,const char *add,int len) {
-        int addlen=len<maxlen?maxlen:len;
+        if(maxlen<=0)
+            return 0;
+        int addlen=len<maxlen?len:maxlen; // len and maxlen both count the terminator
         memcpy(buf,add,addlen);
+        buf[addlen-1]='\0';
         return addlen-1;
         };
 int addtype(char *buf,int maxlen,enum ice_candidate_type t) {
@@ -168,7 +171,7 @@ JUICE_EXPORT int juice_get_selected_addresses_inc_type(juice_agent_t *agent, cha
         int len;
         if((len=addr_record_to_string(&local_cand.resolved, local, local_size)) < 0)
 		    return JUICE_ERR_FAILED;
-        addtype(local+len,local_size-1,local_cand.type);
+        addtype(local+len,local_size-len,local_cand.type);
 
         }
 

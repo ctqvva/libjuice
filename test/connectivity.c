@@ -11,6 +11,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #ifdef _WIN32
@@ -136,6 +137,28 @@ int test_connectivity() {
 	                                             remoteAddr, JUICE_MAX_ADDRESS_STRING_LEN) == 0)) {
 		printf("Local address  1: %s\n", localAddr);
 		printf("Remote address 1: %s\n", remoteAddr);
+	}
+	// The typed form appends to the address and must stay inside the buffers
+	char typedLocal[JUICE_MAX_ADDRESS_STRING_LEN];
+	char typedRemote[JUICE_MAX_ADDRESS_STRING_LEN];
+	if (success &= (juice_get_selected_addresses_inc_type(agent1, typedLocal, sizeof(typedLocal),
+	                                                      typedRemote, sizeof(typedRemote)) == 0)) {
+		success &= strstr(typedLocal, " Host") != NULL;
+		success &= strstr(typedRemote, " Host") != NULL;
+		printf("Local typed address 1: %s\n", typedLocal);
+		printf("Remote typed address 1: %s\n", typedRemote);
+
+		const size_t tight = strlen(typedLocal) - 2; // Room for part of the type only
+		char *shortLocal = malloc(tight);
+		char *shortRemote = malloc(strlen(typedRemote) - 2);
+		if (shortLocal && shortRemote &&
+		    (success &= (juice_get_selected_addresses_inc_type(agent1, shortLocal, tight,
+		                                                       shortRemote, strlen(typedRemote) - 2) == 0))) {
+			success &= strlen(shortLocal) == tight - 1;
+			success &= strlen(shortRemote) == strlen(typedRemote) - 3;
+		}
+		free(shortLocal);
+		free(shortRemote);
 	}
 	if (success &= (juice_get_selected_addresses(agent2, localAddr, JUICE_MAX_ADDRESS_STRING_LEN,
 	                                             remoteAddr, JUICE_MAX_ADDRESS_STRING_LEN) == 0)) {
